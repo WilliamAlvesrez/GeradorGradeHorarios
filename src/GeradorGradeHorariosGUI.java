@@ -1,6 +1,5 @@
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.table.*;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
@@ -8,132 +7,143 @@ import java.util.List;
 public class GeradorGradeHorariosGUI extends JFrame {
 
     public GeradorGradeHorariosGUI() {
-        setTitle("Grade de Horários");
-        setSize(900, 500);
+        setTitle("Grade de Horários - 50 Linhas com 100 Colunas");
+        setSize(1600, 1000);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        String[] colunas = {"Dia", "Horário", "Período", "Matéria", "Professor"};
-        DefaultTableModel modelo = new DefaultTableModel(colunas, 0);
-        JTable tabela = new JTable(modelo);
+        DefaultTableModel modelo = new DefaultTableModel(50, 100);
+        JTable tabela = new JTable(modelo) {
+            @Override
+            public TableCellRenderer getCellRenderer(int row, int column) {
+                return new MultilineTableCellRenderer();
+            }
+        };
 
-        List<String> dias = Arrays.asList("Segunda", "Terça", "Quarta", "Quinta", "Sexta");
+        for (int i = 0; i < tabela.getColumnCount(); i++) {
+            tabela.getColumnModel().getColumn(i).setPreferredWidth(900); // largura ajustada
+        }
+
+        tabela.setRowHeight(30); // altura aumentada para visualização
+
+        JScrollPane scrollPane = new JScrollPane(tabela);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        add(scrollPane, BorderLayout.CENTER);
+
+        List<String> dias = Arrays.asList("Seg", "Ter", "Qua", "Qui", "Sex");
         List<String> horarios = Arrays.asList("1H", "2H", "3H", "4H");
 
-        // List<String> horarios = Collections.singletonList("19h–23h");
-
         List<String> materias = Arrays.asList(
-            "Matemática", "Português", "História", "Geografia", "Física",
-            "Química", "Biologia", "Inglês", "Artes", "Educação Física",
-            "Filosofia", "Sociologia", "Literatura", "Redação", "Informática",
-            "Programação", "Banco de Dados", "Algoritmos", "Empreendedorismo", "Educação Financeira",
-            "Robótica", "Projetos Interdisciplinares", "Ética", "Cidadania", "Psicologia Educacional"
+                "Matemática", "Português", "História", "Geografia", "Física",
+                "Química", "Biologia", "Inglês", "Artes", "Educação Física",
+                "Filosofia", "Sociologia", "Literatura", "Redação", "Informática",
+                "Programação", "Banco de Dados", "Algoritmos", "Empreendedorismo", "Robótica"
         );
 
         List<String> professores = Arrays.asList(
-            "Ana Paula", "Bruno Souza", "Carlos Silva", "Daniela Lima", "Eduardo Martins",
-            "Fernanda Rocha", "Gustavo Alves", "Helena Castro", "Isabela Nunes", "João Pedro"
+                "Ana", "Bruno", "Carlos", "Daniela", "Eduardo",
+                "Fernanda", "Gustavo", "Helena", "Isabela", "João"
         );
 
-        int totalLinhas = 60;
-        int totalPeriodos = 5;
+        Random rand = new Random();
+        int coluna = 0;
 
-        List<String> materiasDisponiveis = new ArrayList<>(materias);
-        Collections.shuffle(materiasDisponiveis);
-
-        Map<Integer, Set<String>> professoresPorPeriodo = new HashMap<>();
-        for (int p = 1; p <= totalPeriodos; p++) {
-            professoresPorPeriodo.put(p, new HashSet<>());
+        for (int i = 0; i < 100; i++) {
+            if (i < 20) {
+                modelo.setValueAt("1º Período", 0, i);
+            } else if (i < 40) {
+                modelo.setValueAt("2º Período", 0, i);
+            } else if (i < 60) {
+                modelo.setValueAt("3º Período", 0, i);
+            } else if (i < 80) {
+                modelo.setValueAt("4º Período", 0, i);
+            } else {
+                modelo.setValueAt("5º Período", 0, i);
+            }
         }
 
-        int linhasGeradas = 0;
-        while (linhasGeradas < totalLinhas) {
-            for (int periodo = 1; periodo <= totalPeriodos && linhasGeradas < totalLinhas; periodo++) {
-                for (String dia : dias) {
-                    if (linhasGeradas >= totalLinhas) break;
+        coluna = 0;
+        for (int periodo = 1; periodo <= 5; periodo++) {
+            for (String dia : dias) {
+                for (String horario : horarios) {
+                    modelo.setValueAt(dia + " - " + horario, 1, coluna);
+                    coluna++;
+                }
+            }
+        }
 
-                    String horario = horarios.get(0);
-
-                    if (materiasDisponiveis.isEmpty()) {
-                        materiasDisponiveis = new ArrayList<>(materias);
-                        Collections.shuffle(materiasDisponiveis);
+        for (int linha = 2; linha < 50; linha++) {
+            coluna = 0;
+            for (String dia : dias) {
+                for (int periodo = 1; periodo <= 5; periodo++) {
+                    String professor = professores.get(rand.nextInt(professores.size()));
+                    String materia = materias.get(rand.nextInt(materias.size()));
+                    for (String horario : horarios) {
+                        modelo.setValueAt(professor + "\n" + materia, linha, coluna);
+                        coluna++;
                     }
+                }
+            }
+        }
 
-                    String materia = materiasDisponiveis.remove(0);
-                    Set<String> usados = professoresPorPeriodo.get(periodo);
-                    List<String> candidatos = new ArrayList<>(professores);
-                    Collections.shuffle(candidatos);
+        Set<Integer> colunasComConflito = new HashSet<>();
+        Map<Integer, Integer> conflitosPorLinha = new HashMap<>();
 
-                    String professor = null;
-                    for (String candidato : candidatos) {
-                        if (!usados.contains(candidato)) {
-                            professor = candidato;
-                            break;
+        for (int linha = 2; linha < 50; linha++) {
+            for (int i = 0; i < dias.size(); i++) {
+                for (int j = 0; j < horarios.size(); j++) {
+                    Map<String, List<Integer>> professorPorPeriodo = new HashMap<>();
+                    for (int periodo = 0; periodo < 5; periodo++) {
+                        int index = i * 20 + j + periodo * 4;
+                        String conteudo = (String) modelo.getValueAt(linha, index);
+                        if (conteudo == null || !conteudo.contains("\n")) continue;
+                        String professor = conteudo.split("\n")[0];
+                        professorPorPeriodo.computeIfAbsent(professor, k -> new ArrayList<>()).add(index);
+                    }
+                    for (List<Integer> indices : professorPorPeriodo.values()) {
+                        if (indices.size() > 1) {
+                            colunasComConflito.addAll(indices);
+                            conflitosPorLinha.put(linha, conflitosPorLinha.getOrDefault(linha, 0) + 1);
                         }
                     }
-
-                    if (professor == null) {
-                        professoresPorPeriodo.get(periodo).clear();
-                        Collections.shuffle(candidatos);
-                        professor = candidatos.get(0);
-                    }
-
-                    professoresPorPeriodo.get(periodo).add(professor);
-
-                    modelo.addRow(new Object[]{dia, horario, periodo, materia, professor});
-                    linhasGeradas++;
                 }
             }
         }
 
-        add(new JScrollPane(tabela), BorderLayout.CENTER);
+        List<Map.Entry<Integer, Integer>> linhasOrdenadas = new ArrayList<>(conflitosPorLinha.entrySet());
+        linhasOrdenadas.sort(Comparator.comparingInt(Map.Entry::getValue));
 
-        // ===== Avaliação de conflitos e destaque de linhas =====
-
-        // 1) Avalia os conflitos (conta por dia, mas não usaremos diretamente esse mapa para colorir)
-        Map<String, Integer> conflitos = avaliarConflitos(modelo);
-
-        // Ordena e imprime os conflitos no terminal de Segunda a Sexta
-        String[] diasSemana = {"Segunda", "Terça", "Quarta", "Quinta", "Sexta"};
-        int totalConflitos = 0;
-        for (String dia : diasSemana) {
-            int qtdConflitos = conflitos.getOrDefault(dia, 0);
-            System.out.println("Conflitos em " + dia + ": " + qtdConflitos);
-            totalConflitos += qtdConflitos;
+        System.out.println("Linhas ordenadas por quantidade de conflitos:");
+        for (Map.Entry<Integer, Integer> entry : linhasOrdenadas) {
+            System.out.println("Linha " + (entry.getKey() + 1) + " - Conflitos: " + entry.getValue());
         }
 
-        System.out.println("\nTotal de conflitos na grade: " + totalConflitos);
+        DefaultTableModel modeloOrdenado = new DefaultTableModel(50, 100);
 
-        // 2) Monta um mapa dia→professor→lista de índices de linha
-        Map<String, Map<String, List<Integer>>> mapa = new HashMap<>();
-        for (int i = 0; i < modelo.getRowCount(); i++) {
-            String dia = modelo.getValueAt(i, 0).toString();
-            String prof = modelo.getValueAt(i, 4).toString();
-            mapa
-              .computeIfAbsent(dia, d -> new HashMap<>())
-              .computeIfAbsent(prof, p -> new ArrayList<>())
-              .add(i);
+        // Copia os cabeçalhos e horários
+        for (int col = 0; col < 100; col++) {
+            modeloOrdenado.setValueAt(modelo.getValueAt(0, col), 0, col);
+            modeloOrdenado.setValueAt(modelo.getValueAt(1, col), 1, col);
         }
 
-        // 3) Coleta em um Set os índices de todas as linhas com professor repetido no mesmo dia
-        Set<Integer> linhasComConflito = new HashSet<>();
-        for (Map<String, List<Integer>> profMap : mapa.values()) {
-            for (List<Integer> idxs : profMap.values()) {
-                if (idxs.size() > 1) {
-                    linhasComConflito.addAll(idxs);
-                }
+        int novaLinha = 2;
+        for (Map.Entry<Integer, Integer> entry : linhasOrdenadas) {
+            int linhaOriginal = entry.getKey();
+            for (int col = 0; col < 100; col++) {
+                modeloOrdenado.setValueAt(modelo.getValueAt(linhaOriginal, col), novaLinha, col);
             }
+            novaLinha++;
         }
 
-        // 4) Renderer que pinta de vermelho apenas as linhas em conflito
+        tabela.setModel(modeloOrdenado);
+
         tabela.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
                                                            boolean isSelected, boolean hasFocus,
                                                            int row, int column) {
-                Component c = super.getTableCellRendererComponent(
-                    table, value, isSelected, hasFocus, row, column);
-                if (linhasComConflito.contains(row)) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (colunasComConflito.contains(column) && row >= 2) {
                     c.setForeground(Color.RED);
                 } else {
                     c.setForeground(Color.BLACK);
@@ -143,51 +153,35 @@ public class GeradorGradeHorariosGUI extends JFrame {
         });
     }
 
-    // Classe auxiliar para representar cada linha da grade
-    static class Grade {
-        String dia;
-        int periodo;
-        String professor;
-        Grade(String dia, int periodo, String professor) {
-            this.dia = dia;
-            this.periodo = periodo;
-            this.professor = professor;
-        }
-    }
-
-    // Método que conta conflitos de professor por dia
-    public static Map<String, Integer> avaliarConflitos(DefaultTableModel modelo) {
-        List<Grade> gradeCompleta = new ArrayList<>();
-        for (int i = 0; i < modelo.getRowCount(); i++) {
-            String dia = modelo.getValueAt(i, 0).toString();
-            int periodo = Integer.parseInt(modelo.getValueAt(i, 2).toString());
-            String prof = modelo.getValueAt(i, 4).toString();
-            gradeCompleta.add(new Grade(dia, periodo, prof));
-        }
-
-        Map<String, Integer> conflitosPorDia = new HashMap<>();
-        String[] diasSemana = {"Segunda", "Terça", "Quarta", "Quinta", "Sexta"};
-        for (String dia : diasSemana) {
-            Map<String, Set<Integer>> mapaDia = new HashMap<>();
-            for (Grade g : gradeCompleta) {
-                if (g.dia.equals(dia)) {
-                    mapaDia.putIfAbsent(g.professor, new HashSet<>());
-                    mapaDia.get(g.professor).add(g.periodo);
-                }
-            }
-            int cont = 0;
-            for (Set<Integer> ps : mapaDia.values()) {
-                if (ps.size() > 1) cont++;
-            }
-            conflitosPorDia.put(dia, cont);
-        }
-        return conflitosPorDia;
-    }
-
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             GeradorGradeHorariosGUI frame = new GeradorGradeHorariosGUI();
             frame.setVisible(true);
         });
+    }
+}
+
+// Renderer que permite múltiplas linhas por célula
+class MultilineTableCellRenderer extends JTextArea implements TableCellRenderer {
+    public MultilineTableCellRenderer() {
+        setLineWrap(true);
+        setWrapStyleWord(true);
+        setOpaque(true);
+    }
+
+    @Override
+    public Component getTableCellRendererComponent(JTable table, Object value,
+                                                   boolean isSelected, boolean hasFocus,
+                                                   int row, int column) {
+        setText(value == null ? "" : value.toString());
+        if (isSelected) {
+            setBackground(table.getSelectionBackground());
+            setForeground(table.getSelectionForeground());
+        } else {
+            setBackground(table.getBackground());
+            setForeground(table.getForeground());
+        }
+        setFont(table.getFont());
+        return this;
     }
 }
